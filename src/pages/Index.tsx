@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Flame, Car, ShieldAlert, Shield, Send, Power, WifiOff } from "lucide-react";
 import { SystemHealth } from "@/components/guardian/SystemHealth";
 import { CrisisCard } from "@/components/guardian/CrisisCard";
@@ -9,8 +9,22 @@ import { OfflineGuides } from "@/components/guardian/OfflineGuides";
 import { GeoZone } from "@/components/guardian/GeoZone";
 import { HardwareCore } from "@/components/guardian/HardwareCore";
 import { DialerProvider } from "@/contexts/DialerContext";
+import { setStatus, subscribeStatus } from "@/lib/firebase";
+import { toast } from "sonner";
 
 type Mode = "fire" | "accident" | "unsafe" | null;
+
+const modeToStatus = (m: Mode) =>
+  m === "fire" ? "FIRE" : m === "accident" ? "ACCIDENT" : m === "unsafe" ? "UNSAFE" : "CLEAR";
+
+const statusToMode = (s: string | null): Mode => {
+  if (!s) return null;
+  const v = String(s).toUpperCase();
+  if (v === "FIRE") return "fire";
+  if (v === "ACCIDENT") return "accident";
+  if (v === "UNSAFE") return "unsafe";
+  return null;
+};
 
 const detectMode = (text: string): Mode => {
   const t = text.toLowerCase();
@@ -25,11 +39,45 @@ const Index = () => {
   const [input, setInput] = useState("");
   const [offline, setOffline] = useState(false);
   const [time, setTime] = useState(new Date());
+  const [dbConnected, setDbConnected] = useState(false);
+  const remoteUpdateRef = useRef(false);
+  const lastWrittenRef = useRef<string | null>(null);
 
   useEffect(() => {
     const i = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(i);
   }, []);
+
+  // Subscribe to Firebase /status — remote (e.g. ESP32) drives the dashboard
+  useEffect(() => {
+    const unsub = subscribeStatus((value) => {
+      setDbConnected(true);
+      const next = statusToMode(value);
+      setMode((current) => {
+        if (next === current) return current;
+        remoteUpdateRef.current = true;
+        if (next) {
+          toast.message(`📡 Remote signal: ${String(value).toUpperCase()}`, {
+            description: "Status received from /status node",
+          });
+        }
+        return next;
+      });
+    });
+    return () => unsub();
+  }, []);
+
+  // Push local mode changes to Firebase /status (skip if change came from remote)
+  useEffect(() => {
+    if (remoteUpdateRef.current) {
+      remoteUpdateRef.current = false;
+      return;
+    }
+    const value = modeToStatus(mode);
+    if (lastWrittenRef.current === value) return;
+    lastWrittenRef.current = value;
+    setStatus(value).catch((e) => console.error("Firebase write failed:", e));
+  }, [mode]);
 
   // Auto-detect from input
   useEffect(() => {
@@ -96,8 +144,12 @@ const Index = () => {
               <h1 className="text-2xl font-black tracking-[0.2em] neon-text-cyan leading-none">
                 GUARDIAN<span className="text-foreground">AI</span>
               </h1>
-              <p className="text-[10px] font-mono text-muted-foreground tracking-widest mt-1">
+              <p className="text-[10px] font-mono text-muted-foreground tracking-widest mt-1 flex items-center gap-2">
                 CRISIS COMMAND · v2.4.1 · LUCKNOW NODE
+                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border ${dbConnected ? "border-success/40 text-success" : "border-muted text-muted-foreground"}`}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${dbConnected ? "bg-success animate-pulse" : "bg-muted-foreground"}`} />
+                  RTDB {dbConnected ? "SYNCED" : "…"}
+                </span>
               </p>
             </div>
           </div>
