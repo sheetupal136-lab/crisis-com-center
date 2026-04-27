@@ -156,15 +156,50 @@ export const UnsafePanel = () => {
           <div className="text-xs text-muted-foreground mt-1 font-mono">Manual emergency activation</div>
         </button>
 
+        <button
+          onClick={autoDialParents}
+          className="press-effect w-full glass rounded-2xl p-4 border-2 border-primary hover:bg-primary/10 flex items-center justify-center gap-2 font-bold tracking-wider"
+          style={{ boxShadow: "var(--glow-cyan)" }}
+        >
+          <PhoneCall className="h-5 w-5 text-primary" />
+          <span className="neon-text-cyan">AUTO-DIAL PARENTS</span>
+        </button>
+
+        {/* STATUS LOG */}
+        <div className="glass rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Terminal className="h-3.5 w-3.5 text-destructive" />
+            <span className="text-xs font-mono text-muted-foreground tracking-widest">STATUS LOG</span>
+            <span className="ml-auto h-1.5 w-1.5 rounded-full bg-destructive animate-pulse" />
+          </div>
+          <div className="rounded-lg bg-[hsl(222_50%_5%)] border border-destructive/20 p-3 font-mono text-xs space-y-1.5 max-h-40 overflow-y-auto scrollbar-thin">
+            {log.length === 0 ? (
+              <div className="text-muted-foreground italic">trigger SOS to view log...</div>
+            ) : (
+              log.map((l, i) => (
+                <div key={i} className="flex items-start gap-2 animate-in fade-in slide-in-from-left-2">
+                  <span className="text-muted-foreground/60 shrink-0">[{l.ts}]</span>
+                  <CheckCircle2 className="h-3 w-3 text-success shrink-0 mt-0.5" />
+                  <span className="text-foreground/90 break-words">{l.text}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
         <div className="glass rounded-2xl p-5">
           <div className="text-xs font-mono text-muted-foreground tracking-widest mb-3">EMERGENCY CONTACTS</div>
           <ul className="space-y-2">
             {[
-              { name: "Mom", num: "+91 98XXX XX012" },
-              { name: "Dad", num: "+91 98XXX XX034" },
-              { name: "Local Guardian", num: "+91 95XXX XX678" },
+              { name: "Mom", num: "+91 98XXX XX012", dial: "9876543210" },
+              { name: "Dad", num: "+91 98XXX XX034", dial: "9876543411" },
+              { name: "Local Guardian", num: "+91 95XXX XX678", dial: "9512345678" },
             ].map((c, i) => (
-              <li key={i} className="flex items-center justify-between p-2.5 rounded-lg bg-secondary/40 border border-border/60">
+              <li
+                key={i}
+                onClick={() => dialer.open(c.dial)}
+                className="press-effect cursor-pointer flex items-center justify-between p-2.5 rounded-lg bg-secondary/40 border border-border/60 hover:border-primary/60 transition-colors"
+              >
                 <div>
                   <div className="text-sm font-medium">{c.name}</div>
                   <div className="text-xs font-mono text-muted-foreground">{c.num}</div>
