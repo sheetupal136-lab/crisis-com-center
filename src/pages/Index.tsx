@@ -208,6 +208,7 @@ const Index = () => {
                   Select a crisis protocol above or describe the situation. GuardianAI is monitoring in real time.
                 </p>
               </section>
+            )}
           </>
         )}
 
