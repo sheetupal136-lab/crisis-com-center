@@ -9,8 +9,22 @@ import { OfflineGuides } from "@/components/guardian/OfflineGuides";
 import { GeoZone } from "@/components/guardian/GeoZone";
 import { HardwareCore } from "@/components/guardian/HardwareCore";
 import { DialerProvider } from "@/contexts/DialerContext";
+import { setStatus, subscribeStatus } from "@/lib/firebase";
+import { toast } from "sonner";
 
 type Mode = "fire" | "accident" | "unsafe" | null;
+
+const modeToStatus = (m: Mode) =>
+  m === "fire" ? "FIRE" : m === "accident" ? "ACCIDENT" : m === "unsafe" ? "UNSAFE" : "CLEAR";
+
+const statusToMode = (s: string | null): Mode => {
+  if (!s) return null;
+  const v = String(s).toUpperCase();
+  if (v === "FIRE") return "fire";
+  if (v === "ACCIDENT") return "accident";
+  if (v === "UNSAFE") return "unsafe";
+  return null;
+};
 
 const detectMode = (text: string): Mode => {
   const t = text.toLowerCase();
