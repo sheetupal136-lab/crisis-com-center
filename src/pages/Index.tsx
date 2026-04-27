@@ -206,6 +206,9 @@ const Index = () => {
               />
             </section>
 
+            {/* VOICE GUARDIAN — always-on listening */}
+            <VoiceGuardian onTriggerUnsafe={() => setMode("unsafe")} />
+
             {/* AI INPUT */}
             <section className="glass rounded-2xl p-5">
               <div className="flex items-center gap-2 mb-3">
