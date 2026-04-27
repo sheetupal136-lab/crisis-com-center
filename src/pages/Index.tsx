@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Flame, Car, ShieldAlert, Shield, Send, Power, WifiOff } from "lucide-react";
 import { SystemHealth } from "@/components/guardian/SystemHealth";
 import { CrisisCard } from "@/components/guardian/CrisisCard";
