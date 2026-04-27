@@ -39,11 +39,45 @@ const Index = () => {
   const [input, setInput] = useState("");
   const [offline, setOffline] = useState(false);
   const [time, setTime] = useState(new Date());
+  const [dbConnected, setDbConnected] = useState(false);
+  const remoteUpdateRef = useRef(false);
+  const lastWrittenRef = useRef<string | null>(null);
 
   useEffect(() => {
     const i = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(i);
   }, []);
+
+  // Subscribe to Firebase /status — remote (e.g. ESP32) drives the dashboard
+  useEffect(() => {
+    const unsub = subscribeStatus((value) => {
+      setDbConnected(true);
+      const next = statusToMode(value);
+      setMode((current) => {
+        if (next === current) return current;
+        remoteUpdateRef.current = true;
+        if (next) {
+          toast.message(`📡 Remote signal: ${String(value).toUpperCase()}`, {
+            description: "Status received from /status node",
+          });
+        }
+        return next;
+      });
+    });
+    return () => unsub();
+  }, []);
+
+  // Push local mode changes to Firebase /status (skip if change came from remote)
+  useEffect(() => {
+    if (remoteUpdateRef.current) {
+      remoteUpdateRef.current = false;
+      return;
+    }
+    const value = modeToStatus(mode);
+    if (lastWrittenRef.current === value) return;
+    lastWrittenRef.current = value;
+    setStatus(value).catch((e) => console.error("Firebase write failed:", e));
+  }, [mode]);
 
   // Auto-detect from input
   useEffect(() => {
