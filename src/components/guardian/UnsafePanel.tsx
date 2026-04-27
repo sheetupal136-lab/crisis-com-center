@@ -1,13 +1,23 @@
-import { Mic, MicOff, ShieldAlert, MessageSquare, Phone, X } from "lucide-react";
+import { Mic, MicOff, ShieldAlert, MessageSquare, Phone, X, Terminal, CheckCircle2, PhoneCall } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useDialer } from "@/contexts/DialerContext";
+
+interface LogEntry { ts: string; text: string }
 
 export const UnsafePanel = () => {
   const [listening, setListening] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [sosActive, setSosActive] = useState(false);
   const [supported, setSupported] = useState(true);
+  const [log, setLog] = useState<LogEntry[]>([]);
   const recognitionRef = useRef<any>(null);
+  const dialer = useDialer();
+
+  const pushLog = (text: string) => {
+    const ts = new Date().toLocaleTimeString("en-IN", { hour12: false });
+    setLog((l) => [{ ts, text }, ...l].slice(0, 8));
+  };
 
   useEffect(() => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -67,6 +77,16 @@ export const UnsafePanel = () => {
     setSosActive(true);
     toast.error("🚨 SOS ACTIVATED", { description: "Alerting emergency contacts via SMS..." });
     if ("vibrate" in navigator) navigator.vibrate([300, 100, 300, 100, 300]);
+    pushLog("Sending SOS to 112 (Police)");
+    setTimeout(() => pushLog("Parent Notified via SMS API"), 600);
+    setTimeout(() => pushLog("Live GPS pin shared with guardians"), 1200);
+    setTimeout(() => pushLog("Audio recording started · uploading to vault"), 1800);
+  };
+
+  const autoDialParents = () => {
+    toast.info("📞 Auto-dialing primary guardian", { description: "Mom · +91 98XXX XX012" });
+    pushLog("Auto-Dial Parents engaged");
+    dialer.open("9876543210");
   };
 
   const dismissSOS = () => {

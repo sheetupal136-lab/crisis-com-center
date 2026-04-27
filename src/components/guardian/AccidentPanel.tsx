@@ -1,5 +1,6 @@
-import { Hospital, BedDouble, Phone, Ambulance, Clock } from "lucide-react";
+import { Hospital, BedDouble, Phone, Ambulance, Clock, PhoneCall } from "lucide-react";
 import { toast } from "sonner";
+import { useDialer } from "@/contexts/DialerContext";
 
 const hospitals = [
   { name: "Apollo Hospitals", dist: "2.4 km", eta: "8 min", icu: 3, trauma: true, rating: 4.8 },
@@ -9,6 +10,7 @@ const hospitals = [
 ];
 
 export const AccidentPanel = () => {
+  const dialer = useDialer();
   return (
     <div className="grid lg:grid-cols-3 gap-5">
       <div className="lg:col-span-2 glass rounded-2xl p-6">
@@ -19,10 +21,16 @@ export const AccidentPanel = () => {
               <Hospital className="h-5 w-5 text-warning" /> Nearby Hospitals
             </h3>
           </div>
-          <div className="text-xs font-mono text-warning flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-warning animate-pulse" />
-            ACCIDENT PROTOCOL
-          </div>
+          <button
+            onClick={() => {
+              toast.error("📞 Notifying 108 Ambulance Service", { description: "tel: API · auto-routing to nearest unit" });
+              dialer.open("108");
+            }}
+            className="press-effect rounded-lg px-3 py-2 bg-warning text-warning-foreground font-bold text-xs flex items-center gap-1.5 tracking-wider"
+            style={{ boxShadow: "var(--glow-warning)" }}
+          >
+            <PhoneCall className="h-3.5 w-3.5" /> NOTIFY 108
+          </button>
         </div>
 
         <ul className="space-y-3">
