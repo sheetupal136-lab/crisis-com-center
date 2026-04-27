@@ -144,8 +144,12 @@ const Index = () => {
               <h1 className="text-2xl font-black tracking-[0.2em] neon-text-cyan leading-none">
                 GUARDIAN<span className="text-foreground">AI</span>
               </h1>
-              <p className="text-[10px] font-mono text-muted-foreground tracking-widest mt-1">
+              <p className="text-[10px] font-mono text-muted-foreground tracking-widest mt-1 flex items-center gap-2">
                 CRISIS COMMAND · v2.4.1 · LUCKNOW NODE
+                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border ${dbConnected ? "border-success/40 text-success" : "border-muted text-muted-foreground"}`}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${dbConnected ? "bg-success animate-pulse" : "bg-muted-foreground"}`} />
+                  RTDB {dbConnected ? "SYNCED" : "…"}
+                </span>
               </p>
             </div>
           </div>
