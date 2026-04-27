@@ -208,15 +208,18 @@ const Index = () => {
                   Select a crisis protocol above or describe the situation. GuardianAI is monitoring in real time.
                 </p>
               </section>
-            )}
           </>
         )}
+
+        {/* HARDWARE CORE */}
+        {!offline && <HardwareCore />}
 
         <footer className="pt-2 pb-4 text-center text-[10px] font-mono text-muted-foreground tracking-widest">
           GUARDIANAI © 2026 · ENCRYPTED CHANNEL · DO NOT MISUSE
         </footer>
       </div>
     </div>
+    </DialerProvider>
   );
 };
 
