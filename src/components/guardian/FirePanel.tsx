@@ -49,12 +49,15 @@ export const FirePanel = () => {
   return (
     <div className="grid lg:grid-cols-5 gap-5">
       {/* Map */}
-      <div className="lg:col-span-3 glass rounded-2xl p-5 relative overflow-hidden min-h-[420px]">
+      <div className="lg:col-span-3 glass rounded-2xl p-5 relative overflow-hidden min-h-[480px]">
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="text-xs font-mono text-muted-foreground tracking-widest">LIVE TACTICAL MAP</div>
-            <h3 className="text-xl font-bold flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-destructive" /> Lucknow, UP
+            <h3 className="text-2xl font-extrabold flex items-center gap-2 tracking-wide">
+              <MapPin className="h-6 w-6 text-destructive" /> Hardoi / Lucknow Region
+              <span className="ml-2 text-[10px] font-mono px-2 py-0.5 rounded-full bg-destructive/15 border border-destructive/40 text-destructive animate-pulse">
+                ACTIVE
+              </span>
             </h3>
           </div>
           <div className="text-xs font-mono text-destructive flex items-center gap-2">

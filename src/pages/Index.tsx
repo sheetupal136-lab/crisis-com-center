@@ -8,6 +8,7 @@ import { UnsafePanel } from "@/components/guardian/UnsafePanel";
 import { OfflineGuides } from "@/components/guardian/OfflineGuides";
 import { GeoZone } from "@/components/guardian/GeoZone";
 import { HardwareCore } from "@/components/guardian/HardwareCore";
+import { VoiceGuardian } from "@/components/guardian/VoiceGuardian";
 import { DialerProvider } from "@/contexts/DialerContext";
 import { setStatus, subscribeStatus } from "@/lib/firebase";
 import { toast } from "sonner";
