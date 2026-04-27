@@ -6,6 +6,9 @@ import { FirePanel } from "@/components/guardian/FirePanel";
 import { AccidentPanel } from "@/components/guardian/AccidentPanel";
 import { UnsafePanel } from "@/components/guardian/UnsafePanel";
 import { OfflineGuides } from "@/components/guardian/OfflineGuides";
+import { GeoZone } from "@/components/guardian/GeoZone";
+import { HardwareCore } from "@/components/guardian/HardwareCore";
+import { DialerProvider } from "@/contexts/DialerContext";
 
 type Mode = "fire" | "accident" | "unsafe" | null;
 
@@ -45,10 +48,43 @@ const Index = () => {
   }, [mode]);
 
   return (
+    <DialerProvider>
     <div className={`relative min-h-screen ${modeClass}`}>
       <div className="ambient-overlay" />
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* TOP STATS BAR */}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <GeoZone />
+          <div className="glass rounded-xl px-4 py-3 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-success/15 border border-success/40 flex items-center justify-center">
+              <Shield className="h-4 w-4 text-success" />
+            </div>
+            <div>
+              <div className="text-[10px] font-mono text-muted-foreground tracking-widest">PROTOCOL STATUS</div>
+              <div className="text-sm font-bold font-mono text-success">{mode ? `${mode.toUpperCase()} ENGAGED` : "ALL CLEAR"}</div>
+            </div>
+          </div>
+          <div className="glass rounded-xl px-4 py-3 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-primary/15 border border-primary/40 flex items-center justify-center">
+              <span className="text-primary font-mono text-xs font-bold">12</span>
+            </div>
+            <div>
+              <div className="text-[10px] font-mono text-muted-foreground tracking-widest">MESH NODES</div>
+              <div className="text-sm font-bold font-mono text-primary">12 / 12 ONLINE</div>
+            </div>
+          </div>
+          <div className="glass rounded-xl px-4 py-3 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-warning/15 border border-warning/40 flex items-center justify-center">
+              <span className="text-warning font-mono text-xs font-bold">⚡</span>
+            </div>
+            <div>
+              <div className="text-[10px] font-mono text-muted-foreground tracking-widest">RESPONSE TIME</div>
+              <div className="text-sm font-bold font-mono text-warning">~6 min avg</div>
+            </div>
+          </div>
+        </div>
+
         {/* HEADER */}
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -176,11 +212,15 @@ const Index = () => {
           </>
         )}
 
+        {/* HARDWARE CORE */}
+        {!offline && <HardwareCore />}
+
         <footer className="pt-2 pb-4 text-center text-[10px] font-mono text-muted-foreground tracking-widest">
           GUARDIANAI © 2026 · ENCRYPTED CHANNEL · DO NOT MISUSE
         </footer>
       </div>
     </div>
+    </DialerProvider>
   );
 };
 
