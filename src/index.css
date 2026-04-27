@@ -92,6 +92,8 @@
     background: var(--gradient-bg);
     background-attachment: fixed;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
   }
 
@@ -217,6 +219,7 @@
 
 @layer utilities {
   .text-balance { text-wrap: balance; }
+  .font-mono, code, pre, kbd { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
 
   .scrollbar-thin::-webkit-scrollbar { width: 6px; }
   .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
