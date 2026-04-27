@@ -6,6 +6,9 @@ import { FirePanel } from "@/components/guardian/FirePanel";
 import { AccidentPanel } from "@/components/guardian/AccidentPanel";
 import { UnsafePanel } from "@/components/guardian/UnsafePanel";
 import { OfflineGuides } from "@/components/guardian/OfflineGuides";
+import { GeoZone } from "@/components/guardian/GeoZone";
+import { HardwareCore } from "@/components/guardian/HardwareCore";
+import { DialerProvider } from "@/contexts/DialerContext";
 
 type Mode = "fire" | "accident" | "unsafe" | null;
 
