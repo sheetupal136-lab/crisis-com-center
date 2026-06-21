@@ -110,9 +110,10 @@ const Auth = () => {
   );
 };
 
-const Field = ({
-  icon: Icon, value, onChange, ...rest
-}: { icon: any; value: string; onChange: (v: string) => void } & React.InputHTMLAttributes<HTMLInputElement>) => (
+type FieldProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange" | "value"> & {
+  icon: any; value: string; onChange: (v: string) => void;
+};
+const Field = ({ icon: Icon, value, onChange, ...rest }: FieldProps) => (
   <div className="relative">
     <Icon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
     <input
