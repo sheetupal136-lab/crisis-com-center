@@ -2,6 +2,7 @@ import { Mic, MicOff, ShieldAlert, MessageSquare, X, Phone, MapPin, Send } from 
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { setStatus } from "@/lib/firebase";
+import { logCrisisEvent } from "@/lib/crisisLog";
 
 interface Props {
   onTriggerUnsafe: () => void;
@@ -127,10 +128,18 @@ export const VoiceGuardian = ({ onTriggerUnsafe }: Props) => {
     setSmsOpen(true);
     onTriggerUnsafe();
     setStatus("UNSAFE").catch(() => {});
+    logCrisisEvent({
+      type: "UNSAFE",
+      source: "voice",
+      transcript: transcript || "Voice trigger: HELP detected",
+      location_text: LOCATION,
+      latitude: 26.8467,
+      longitude: 80.9462,
+    }).catch(() => {});
     if ("vibrate" in navigator) navigator.vibrate([400, 120, 400, 120, 600]);
     playAlarm();
-    toast.error("🚨 SOS SENT", { description: "Message sent to Parents & Police" });
-    setTimeout(() => setSosNotice(false), 5000);
+    toast.error("🚨 SOS DISPATCHED", { description: "Parent SMS sent · Police (112) dialing…" });
+    setTimeout(() => setSosNotice(false), 6000);
   };
 
   return (
