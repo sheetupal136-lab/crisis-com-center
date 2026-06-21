@@ -205,9 +205,14 @@ export const VoiceGuardian = ({ onTriggerUnsafe }: Props) => {
         </div>
       </section>
 
+      {/* FULL-SCREEN RED FLASH */}
+      {sosNotice && (
+        <div className="fixed inset-0 z-[100] pointer-events-none animate-sos-flash" style={{ mixBlendMode: "screen" }} />
+      )}
+
       {/* Big SOS Notification */}
       {sosNotice && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[120] w-[min(560px,92vw)] animate-in fade-in slide-in-from-top-4">
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[120] w-[min(620px,94vw)] animate-in fade-in slide-in-from-top-4">
           <div
             className="glass-strong rounded-2xl border-2 border-destructive p-5 flex items-center gap-4"
             style={{ boxShadow: "0 0 60px hsl(0 95% 55% / 0.8)" }}
@@ -216,9 +221,10 @@ export const VoiceGuardian = ({ onTriggerUnsafe }: Props) => {
               <ShieldAlert className="h-7 w-7 text-destructive" />
             </div>
             <div className="flex-1">
-              <div className="text-[10px] font-mono tracking-widest text-destructive">SOS TRANSMITTED</div>
-              <div className="text-lg font-bold neon-text-red leading-tight">
-                SOS SENT: Message sent to Parents &amp; Police!
+              <div className="text-[10px] font-mono tracking-widest text-destructive">SOS TRANSMITTED · 112 PROTOCOL</div>
+              <div className="text-lg font-bold neon-text-red leading-tight">SOS DISPATCHED!</div>
+              <div className="text-xs font-mono text-foreground/80 mt-1">
+                ✓ Parent SMS Sent &nbsp;·&nbsp; ☎ Police (112) Dialing…
               </div>
             </div>
             <button
