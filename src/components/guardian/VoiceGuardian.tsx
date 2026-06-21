@@ -2,6 +2,7 @@ import { Mic, MicOff, ShieldAlert, MessageSquare, X, Phone, MapPin, Send } from 
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { setStatus } from "@/lib/firebase";
+import { logCrisisEvent } from "@/lib/crisisLog";
 
 interface Props {
   onTriggerUnsafe: () => void;
@@ -127,10 +128,18 @@ export const VoiceGuardian = ({ onTriggerUnsafe }: Props) => {
     setSmsOpen(true);
     onTriggerUnsafe();
     setStatus("UNSAFE").catch(() => {});
+    logCrisisEvent({
+      type: "UNSAFE",
+      source: "voice",
+      transcript: transcript || "Voice trigger: HELP detected",
+      location_text: LOCATION,
+      latitude: 26.8467,
+      longitude: 80.9462,
+    }).catch(() => {});
     if ("vibrate" in navigator) navigator.vibrate([400, 120, 400, 120, 600]);
     playAlarm();
-    toast.error("🚨 SOS SENT", { description: "Message sent to Parents & Police" });
-    setTimeout(() => setSosNotice(false), 5000);
+    toast.error("🚨 SOS DISPATCHED", { description: "Parent SMS sent · Police (112) dialing…" });
+    setTimeout(() => setSosNotice(false), 6000);
   };
 
   return (
@@ -196,9 +205,14 @@ export const VoiceGuardian = ({ onTriggerUnsafe }: Props) => {
         </div>
       </section>
 
+      {/* FULL-SCREEN RED FLASH */}
+      {sosNotice && (
+        <div className="fixed inset-0 z-[100] pointer-events-none animate-sos-flash" style={{ mixBlendMode: "screen" }} />
+      )}
+
       {/* Big SOS Notification */}
       {sosNotice && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[120] w-[min(560px,92vw)] animate-in fade-in slide-in-from-top-4">
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[120] w-[min(620px,94vw)] animate-in fade-in slide-in-from-top-4">
           <div
             className="glass-strong rounded-2xl border-2 border-destructive p-5 flex items-center gap-4"
             style={{ boxShadow: "0 0 60px hsl(0 95% 55% / 0.8)" }}
@@ -207,9 +221,10 @@ export const VoiceGuardian = ({ onTriggerUnsafe }: Props) => {
               <ShieldAlert className="h-7 w-7 text-destructive" />
             </div>
             <div className="flex-1">
-              <div className="text-[10px] font-mono tracking-widest text-destructive">SOS TRANSMITTED</div>
-              <div className="text-lg font-bold neon-text-red leading-tight">
-                SOS SENT: Message sent to Parents &amp; Police!
+              <div className="text-[10px] font-mono tracking-widest text-destructive">SOS TRANSMITTED · 112 PROTOCOL</div>
+              <div className="text-lg font-bold neon-text-red leading-tight">SOS DISPATCHED!</div>
+              <div className="text-xs font-mono text-foreground/80 mt-1">
+                ✓ Parent SMS Sent &nbsp;·&nbsp; ☎ Police (112) Dialing…
               </div>
             </div>
             <button
