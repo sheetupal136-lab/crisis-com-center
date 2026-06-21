@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Flame, Car, ShieldAlert, Shield, Send, Power, WifiOff } from "lucide-react";
+import { Flame, Car, ShieldAlert, Shield, Send, Power, WifiOff, RotateCcw, LogOut } from "lucide-react";
 import { SystemHealth } from "@/components/guardian/SystemHealth";
 import { CrisisCard } from "@/components/guardian/CrisisCard";
 import { FirePanel } from "@/components/guardian/FirePanel";
@@ -8,9 +8,13 @@ import { UnsafePanel } from "@/components/guardian/UnsafePanel";
 import { OfflineGuides } from "@/components/guardian/OfflineGuides";
 import { GeoZone } from "@/components/guardian/GeoZone";
 import { HardwareCore } from "@/components/guardian/HardwareCore";
+import { HardwareArchitecture } from "@/components/guardian/HardwareArchitecture";
+import { CrisisHistory } from "@/components/guardian/CrisisHistory";
 import { VoiceGuardian } from "@/components/guardian/VoiceGuardian";
 import { DialerProvider } from "@/contexts/DialerContext";
 import { setStatus, subscribeStatus } from "@/lib/firebase";
+import { logCrisisEvent, resolveActiveEvents, type CrisisSource } from "@/lib/crisisLog";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 type Mode = "fire" | "accident" | "unsafe" | null;
@@ -36,6 +40,7 @@ const detectMode = (text: string): Mode => {
 };
 
 const Index = () => {
+  const { user, signOut, isResponder } = useAuth();
   const [mode, setMode] = useState<Mode>(null);
   const [input, setInput] = useState("");
   const [offline, setOffline] = useState(false);
@@ -43,13 +48,14 @@ const Index = () => {
   const [dbConnected, setDbConnected] = useState(false);
   const remoteUpdateRef = useRef(false);
   const lastWrittenRef = useRef<string | null>(null);
+  const loggedModeRef = useRef<Mode>(null);
 
   useEffect(() => {
     const i = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(i);
   }, []);
 
-  // Subscribe to Firebase /status — remote (e.g. ESP32) drives the dashboard
+  // Firebase /status sync
   useEffect(() => {
     const unsub = subscribeStatus((value) => {
       setDbConnected(true);
@@ -68,24 +74,53 @@ const Index = () => {
     return () => unsub();
   }, []);
 
-  // Push local mode changes to Firebase /status (skip if change came from remote)
   useEffect(() => {
     if (remoteUpdateRef.current) {
       remoteUpdateRef.current = false;
+      // Remote update came in — log it as 'remote' source (esp32 push)
+      if (mode && loggedModeRef.current !== mode) {
+        loggedModeRef.current = mode;
+        logCrisisEvent({
+          type: mode.toUpperCase() as any,
+          source: "remote",
+          transcript: "Remote signal received via Firebase /status",
+        });
+      }
       return;
     }
     const value = modeToStatus(mode);
     if (lastWrittenRef.current === value) return;
     lastWrittenRef.current = value;
     setStatus(value).catch((e) => console.error("Firebase write failed:", e));
+    if (mode === null) loggedModeRef.current = null;
   }, [mode]);
 
-  // Auto-detect from input
   useEffect(() => {
     if (!input.trim()) return;
     const detected = detectMode(input);
-    if (detected && detected !== mode) setMode(detected);
+    if (detected && detected !== mode) {
+      setMode(detected);
+      logCrisisEvent({ type: detected.toUpperCase() as any, source: "ai", transcript: input });
+      loggedModeRef.current = detected;
+    }
   }, [input, mode]);
+
+  const triggerMode = (m: Exclude<Mode, null>, source: CrisisSource = "manual") => {
+    if (mode === m) {
+      setMode(null);
+    } else {
+      setMode(m);
+      logCrisisEvent({ type: m.toUpperCase() as any, source });
+      loggedModeRef.current = m;
+    }
+  };
+
+  const handleReset = async () => {
+    setMode(null);
+    await resolveActiveEvents();
+    await setStatus("CLEAR").catch(() => {});
+    toast.success("✓ SYSTEM RESET", { description: "All protocols cleared · status → SAFE" });
+  };
 
   const modeClass = useMemo(() => {
     switch (mode) {
@@ -145,22 +180,38 @@ const Index = () => {
               <h1 className="text-2xl font-black tracking-[0.2em] neon-text-cyan leading-none">
                 GUARDIAN<span className="text-foreground">AI</span>
               </h1>
-              <p className="text-[10px] font-mono text-muted-foreground tracking-widest mt-1 flex items-center gap-2">
+              <p className="text-[10px] font-mono text-muted-foreground tracking-widest mt-1 flex items-center gap-2 flex-wrap">
                 CRISIS COMMAND · v2.4.1 · LUCKNOW NODE
                 <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border ${dbConnected ? "border-success/40 text-success" : "border-muted text-muted-foreground"}`}>
                   <span className={`h-1.5 w-1.5 rounded-full ${dbConnected ? "bg-success animate-pulse" : "bg-muted-foreground"}`} />
                   RTDB {dbConnected ? "SYNCED" : "…"}
                 </span>
+                {user && (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-primary/40 text-primary">
+                    {isResponder ? "RESPONDER" : "FAMILY"} · {user.email}
+                  </span>
+                )}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
             <div className="hidden md:block glass rounded-xl px-4 py-3 font-mono text-xs">
               <div className="text-muted-foreground tracking-widest text-[10px]">SYSTEM TIME</div>
               <div className="text-primary text-base">{time.toLocaleTimeString("en-IN", { hour12: false })}</div>
             </div>
             <SystemHealth offline={offline} />
+
+            {/* RESET BUTTON */}
+            <button
+              onClick={handleReset}
+              className="press-effect glass rounded-xl px-4 py-3 flex items-center gap-2 text-xs font-mono tracking-wider border border-success/50 text-success hover:bg-success/10"
+              style={{ boxShadow: "var(--glow-success)" }}
+            >
+              <RotateCcw className="h-4 w-4" />
+              RESET TO SAFE
+            </button>
+
             <button
               onClick={() => setOffline((o) => !o)}
               className={`press-effect glass rounded-xl px-4 py-3 flex items-center gap-2 text-xs font-mono tracking-wider border ${
@@ -170,13 +221,19 @@ const Index = () => {
               {offline ? <WifiOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
               {offline ? "OFFLINE" : "ONLINE"}
             </button>
+
+            <button
+              onClick={signOut}
+              className="press-effect glass rounded-xl px-3 py-3 flex items-center gap-2 text-xs font-mono tracking-wider border border-border text-muted-foreground hover:text-destructive hover:border-destructive/50"
+              aria-label="Sign out"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
         </header>
 
-        {/* OFFLINE MODE */}
         {offline && <OfflineGuides />}
 
-        {/* CRISIS CARDS */}
         {!offline && (
           <>
             <section className="grid md:grid-cols-3 gap-5">
@@ -186,7 +243,7 @@ const Index = () => {
                 subtitle="Dispatch fire brigade & evacuation routes"
                 variant="fire"
                 active={mode === "fire"}
-                onClick={() => setMode(mode === "fire" ? null : "fire")}
+                onClick={() => triggerMode("fire")}
               />
               <CrisisCard
                 icon={Car}
@@ -194,7 +251,7 @@ const Index = () => {
                 subtitle="Locate trauma centers & ICU availability"
                 variant="accident"
                 active={mode === "accident"}
-                onClick={() => setMode(mode === "accident" ? null : "accident")}
+                onClick={() => triggerMode("accident")}
               />
               <CrisisCard
                 icon={ShieldAlert}
@@ -202,14 +259,12 @@ const Index = () => {
                 subtitle="Voice guardian & SOS panic protocol"
                 variant="unsafe"
                 active={mode === "unsafe"}
-                onClick={() => setMode(mode === "unsafe" ? null : "unsafe")}
+                onClick={() => triggerMode("unsafe")}
               />
             </section>
 
-            {/* VOICE GUARDIAN — always-on listening */}
             <VoiceGuardian onTriggerUnsafe={() => setMode("unsafe")} />
 
-            {/* AI INPUT */}
             <section className="glass rounded-2xl p-5">
               <div className="flex items-center gap-2 mb-3">
                 <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
@@ -227,7 +282,10 @@ const Index = () => {
                 <button
                   onClick={() => {
                     const d = detectMode(input);
-                    if (d) setMode(d);
+                    if (d) {
+                      setMode(d);
+                      logCrisisEvent({ type: d.toUpperCase() as any, source: "ai", transcript: input });
+                    }
                   }}
                   className="press-effect rounded-xl px-5 bg-primary text-primary-foreground font-semibold flex items-center gap-2 text-sm"
                   style={{ boxShadow: "var(--glow-cyan)" }}
@@ -249,7 +307,6 @@ const Index = () => {
               )}
             </section>
 
-            {/* DYNAMIC PANELS */}
             {mode === "fire" && <FirePanel />}
             {mode === "accident" && <AccidentPanel />}
             {mode === "unsafe" && <UnsafePanel />}
@@ -265,11 +322,13 @@ const Index = () => {
                 </p>
               </section>
             )}
+
+            <CrisisHistory />
           </>
         )}
 
-        {/* HARDWARE CORE */}
         {!offline && <HardwareCore />}
+        {!offline && <HardwareArchitecture />}
 
         <footer className="pt-2 pb-4 text-center text-[10px] font-mono text-muted-foreground tracking-widest">
           GUARDIANAI © 2026 · ENCRYPTED CHANNEL · DO NOT MISUSE
