@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { Shield, Mail, Lock, User as UserIcon, Loader2 } from "lucide-react";
+import { AuthError } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -13,6 +14,7 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
+  const [formError, setFormError] = useState("");
 
   useEffect(() => {
     if (user && !loading) navigate("/", { replace: true });
@@ -23,9 +25,11 @@ const Auth = () => {
   const handle = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
+    setFormError("");
+    const normalizedEmail = email.trim().toLowerCase();
     try {
       if (mode === "forgot") {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
           redirectTo: `${window.location.origin}/reset-password`,
         });
         if (error) throw error;
@@ -33,23 +37,35 @@ const Auth = () => {
         setMode("signin");
       } else if (mode === "signup") {
         const { error } = await supabase.auth.signUp({
-          email,
+          email: normalizedEmail,
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/`,
-            data: { display_name: name || email.split("@")[0] },
+            data: { display_name: name || normalizedEmail.split("@")[0] },
           },
         });
         if (error) throw error;
         toast.success("Account created — you can sign in now.");
         setMode("signin");
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: normalizedEmail,
+          password,
+        });
         if (error) throw error;
+        if (!data.session) throw new Error("Login session start nahi ho saka. Dobara try karein.");
         toast.success("Welcome back, Guardian.");
+        navigate("/", { replace: true });
       }
-    } catch (err: any) {
-      toast.error(err?.message ?? "Authentication failed");
+    } catch (err: unknown) {
+      const invalidCredentials = err instanceof AuthError && err.code === "invalid_credentials";
+      const message = invalidCredentials
+        ? "Email ya password galat hai. Password yaad nahi hai toh neeche Reset Password dabayein."
+        : err instanceof Error
+          ? err.message
+          : "Authentication failed";
+      setFormError(message);
+      toast.error(message);
     } finally {
       setBusy(false);
     }
@@ -106,8 +122,14 @@ const Auth = () => {
                 onClick={() => setMode("forgot")}
                 className="text-xs text-primary hover:underline w-full text-right"
               >
-                Forgot password?
+                Reset Password
               </button>
+            )}
+
+            {formError && (
+              <div role="alert" className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                {formError}
+              </div>
             )}
 
             <button
