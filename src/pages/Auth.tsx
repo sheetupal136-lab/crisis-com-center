@@ -96,7 +96,19 @@ const Auth = () => {
               <Field icon={UserIcon} placeholder="Display name" value={name} onChange={setName} />
             )}
             <Field icon={Mail} type="email" placeholder="you@example.com" value={email} onChange={setEmail} required />
-            <Field icon={Lock} type="password" placeholder="Password (min 6 chars)" value={password} onChange={setPassword} required minLength={6} />
+            {mode !== "forgot" && (
+              <Field icon={Lock} type="password" placeholder="Password (min 6 chars)" value={password} onChange={setPassword} required minLength={6} />
+            )}
+
+            {mode === "signin" && (
+              <button
+                type="button"
+                onClick={() => setMode("forgot")}
+                className="text-xs text-primary hover:underline w-full text-right"
+              >
+                Forgot password?
+              </button>
+            )}
 
             <button
               disabled={busy}
@@ -104,8 +116,18 @@ const Auth = () => {
               style={{ boxShadow: "var(--glow-cyan)" }}
             >
               {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-              {mode === "signin" ? "ENTER COMMAND CENTER" : "REQUEST ACCESS"}
+              {mode === "signin" ? "ENTER COMMAND CENTER" : mode === "signup" ? "REQUEST ACCESS" : "SEND RESET LINK"}
             </button>
+
+            {mode === "forgot" && (
+              <button
+                type="button"
+                onClick={() => setMode("signin")}
+                className="text-xs text-muted-foreground hover:text-foreground w-full text-center"
+              >
+                ← Back to Sign In
+              </button>
+            )}
           </form>
 
           <p className="mt-4 text-[11px] font-mono text-muted-foreground text-center">
