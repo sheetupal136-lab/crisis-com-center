@@ -1,41 +1,11 @@
 import { useEffect, useState } from "react";
 import { Mic, Thermometer, Activity, Radio, Cpu, Signal, Bluetooth } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-
-interface SensorRow {
-  temperature_c: number | null;
-  decibel: number | null;
-  accel_x: number | null;
-  accel_y: number | null;
-  accel_z: number | null;
-}
 
 export const HardwareArchitecture = () => {
-  const [live, setLive] = useState<SensorRow | null>(null);
   // simulated fallbacks that drift over time
   const [simNoise, setSimNoise] = useState(34);
   const [simTemp, setSimTemp] = useState(27.4);
   const [simAxis, setSimAxis] = useState({ x: 0.02, y: -0.01, z: 0.99 });
-
-  useEffect(() => {
-    const load = async () => {
-      const { data } = await supabase
-        .from("sensor_readings")
-        .select("temperature_c, decibel, accel_x, accel_y, accel_z")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (data) setLive(data as SensorRow);
-    };
-    load();
-    const channel = supabase
-      .channel("sensor-feed")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "sensor_readings" }, (p) => {
-        setLive(p.new as SensorRow);
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, []);
 
   useEffect(() => {
     const i = setInterval(() => {
@@ -50,14 +20,14 @@ export const HardwareArchitecture = () => {
     return () => clearInterval(i);
   }, []);
 
-  const noise = live?.decibel ?? simNoise;
-  const temp = live?.temperature_c ?? simTemp;
-  const ax = live?.accel_x ?? simAxis.x;
-  const ay = live?.accel_y ?? simAxis.y;
-  const az = live?.accel_z ?? simAxis.z;
+  const noise = simNoise;
+  const temp = simTemp;
+  const ax = simAxis.x;
+  const ay = simAxis.y;
+  const az = simAxis.z;
   const tempHot = temp > 60;
   const tempStatus = tempHot ? "DANGER" : "SAFE";
-  const dataSource = live ? "ESP32 LIVE" : "SIMULATED";
+  const dataSource = "LOCAL SIMULATION";
 
   return (
     <section className="rounded-3xl border border-primary/30 bg-[hsl(222_50%_5%/0.6)] p-6 sm:p-8" style={{ boxShadow: "var(--glow-cyan)" }}>
@@ -73,8 +43,8 @@ export const HardwareArchitecture = () => {
             </h3>
           </div>
         </div>
-        <div className={`text-xs font-mono flex items-center gap-2 px-3 py-1.5 rounded-full border ${live ? "text-success bg-success/10 border-success/30" : "text-muted-foreground bg-secondary/40 border-border"}`}>
-          <span className={`h-2 w-2 rounded-full ${live ? "bg-success animate-pulse" : "bg-muted-foreground"}`} />
+        <div className="text-xs font-mono flex items-center gap-2 px-3 py-1.5 rounded-full border text-muted-foreground bg-secondary/40 border-border">
+          <span className="h-2 w-2 rounded-full bg-muted-foreground animate-pulse" />
           {dataSource}
         </div>
       </div>

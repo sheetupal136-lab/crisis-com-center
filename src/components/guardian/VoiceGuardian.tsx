@@ -1,7 +1,6 @@
 import { Mic, MicOff, ShieldAlert, MessageSquare, X, Phone, MapPin, Send } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { setStatus } from "@/lib/firebase";
 import { logCrisisEvent } from "@/lib/crisisLog";
 
 interface Props {
@@ -127,7 +126,6 @@ export const VoiceGuardian = ({ onTriggerUnsafe }: Props) => {
     setSosNotice(true);
     setSmsOpen(true);
     onTriggerUnsafe();
-    setStatus("UNSAFE").catch(() => {});
     logCrisisEvent({
       type: "UNSAFE",
       source: "voice",

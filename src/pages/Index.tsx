@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Flame, Car, ShieldAlert, Shield, Send, Power, WifiOff, RotateCcw, LogOut } from "lucide-react";
+import { Flame, Car, ShieldAlert, Shield, Send, Power, WifiOff, RotateCcw } from "lucide-react";
 import { SystemHealth } from "@/components/guardian/SystemHealth";
 import { CrisisCard } from "@/components/guardian/CrisisCard";
 import { FirePanel } from "@/components/guardian/FirePanel";
@@ -12,24 +12,10 @@ import { HardwareArchitecture } from "@/components/guardian/HardwareArchitecture
 import { CrisisHistory } from "@/components/guardian/CrisisHistory";
 import { VoiceGuardian } from "@/components/guardian/VoiceGuardian";
 import { DialerProvider } from "@/contexts/DialerContext";
-import { setStatus, subscribeStatus } from "@/lib/firebase";
 import { logCrisisEvent, resolveActiveEvents, type CrisisSource } from "@/lib/crisisLog";
-import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 type Mode = "fire" | "accident" | "unsafe" | null;
-
-const modeToStatus = (m: Mode) =>
-  m === "fire" ? "FIRE" : m === "accident" ? "ACCIDENT" : m === "unsafe" ? "UNSAFE" : "CLEAR";
-
-const statusToMode = (s: string | null): Mode => {
-  if (!s) return null;
-  const v = String(s).toUpperCase();
-  if (v === "FIRE") return "fire";
-  if (v === "ACCIDENT") return "accident";
-  if (v === "UNSAFE") return "unsafe";
-  return null;
-};
 
 const detectMode = (text: string): Mode => {
   const t = text.toLowerCase();
@@ -40,68 +26,22 @@ const detectMode = (text: string): Mode => {
 };
 
 const Index = () => {
-  const { user, signOut, isResponder } = useAuth();
   const [mode, setMode] = useState<Mode>(null);
   const [input, setInput] = useState("");
   const [offline, setOffline] = useState(false);
   const [time, setTime] = useState(new Date());
-  const [dbConnected, setDbConnected] = useState(false);
-  const remoteUpdateRef = useRef(false);
-  const lastWrittenRef = useRef<string | null>(null);
-  const loggedModeRef = useRef<Mode>(null);
 
   useEffect(() => {
     const i = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(i);
   }, []);
 
-  // Firebase /status sync
-  useEffect(() => {
-    const unsub = subscribeStatus((value) => {
-      setDbConnected(true);
-      const next = statusToMode(value);
-      setMode((current) => {
-        if (next === current) return current;
-        remoteUpdateRef.current = true;
-        if (next) {
-          toast.message(`📡 Remote signal: ${String(value).toUpperCase()}`, {
-            description: "Status received from /status node",
-          });
-        }
-        return next;
-      });
-    });
-    return () => unsub();
-  }, []);
-
-  useEffect(() => {
-    if (remoteUpdateRef.current) {
-      remoteUpdateRef.current = false;
-      // Remote update came in — log it as 'remote' source (esp32 push)
-      if (mode && loggedModeRef.current !== mode) {
-        loggedModeRef.current = mode;
-        logCrisisEvent({
-          type: mode.toUpperCase() as any,
-          source: "remote",
-          transcript: "Remote signal received via Firebase /status",
-        });
-      }
-      return;
-    }
-    const value = modeToStatus(mode);
-    if (lastWrittenRef.current === value) return;
-    lastWrittenRef.current = value;
-    setStatus(value).catch((e) => console.error("Firebase write failed:", e));
-    if (mode === null) loggedModeRef.current = null;
-  }, [mode]);
-
   useEffect(() => {
     if (!input.trim()) return;
     const detected = detectMode(input);
     if (detected && detected !== mode) {
       setMode(detected);
-      logCrisisEvent({ type: detected.toUpperCase() as any, source: "ai", transcript: input });
-      loggedModeRef.current = detected;
+        void logCrisisEvent({ type: detected.toUpperCase() as any, source: "ai", transcript: input });
     }
   }, [input, mode]);
 
@@ -110,15 +50,13 @@ const Index = () => {
       setMode(null);
     } else {
       setMode(m);
-      logCrisisEvent({ type: m.toUpperCase() as any, source });
-      loggedModeRef.current = m;
+      void logCrisisEvent({ type: m.toUpperCase() as any, source });
     }
   };
 
   const handleReset = async () => {
     setMode(null);
     await resolveActiveEvents();
-    await setStatus("CLEAR").catch(() => {});
     toast.success("✓ SYSTEM RESET", { description: "All protocols cleared · status → SAFE" });
   };
 
@@ -182,15 +120,10 @@ const Index = () => {
               </h1>
               <p className="text-[10px] font-mono text-muted-foreground tracking-widest mt-1 flex items-center gap-2 flex-wrap">
                 CRISIS COMMAND · v2.4.1 · LUCKNOW NODE
-                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border ${dbConnected ? "border-success/40 text-success" : "border-muted text-muted-foreground"}`}>
-                  <span className={`h-1.5 w-1.5 rounded-full ${dbConnected ? "bg-success animate-pulse" : "bg-muted-foreground"}`} />
-                  RTDB {dbConnected ? "SYNCED" : "…"}
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-warning/40 text-warning">
+                  <span className="h-1.5 w-1.5 rounded-full bg-warning animate-pulse" />
+                  LOCAL MODE
                 </span>
-                {user && (
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-primary/40 text-primary">
-                    {isResponder ? "RESPONDER" : "FAMILY"} · {user.email}
-                  </span>
-                )}
               </p>
             </div>
           </div>
@@ -222,13 +155,6 @@ const Index = () => {
               {offline ? "OFFLINE" : "ONLINE"}
             </button>
 
-            <button
-              onClick={signOut}
-              className="press-effect glass rounded-xl px-3 py-3 flex items-center gap-2 text-xs font-mono tracking-wider border border-border text-muted-foreground hover:text-destructive hover:border-destructive/50"
-              aria-label="Sign out"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
           </div>
         </header>
 
@@ -284,7 +210,7 @@ const Index = () => {
                     const d = detectMode(input);
                     if (d) {
                       setMode(d);
-                      logCrisisEvent({ type: d.toUpperCase() as any, source: "ai", transcript: input });
+                      void logCrisisEvent({ type: d.toUpperCase() as any, source: "ai", transcript: input });
                     }
                   }}
                   className="press-effect rounded-xl px-5 bg-primary text-primary-foreground font-semibold flex items-center gap-2 text-sm"
